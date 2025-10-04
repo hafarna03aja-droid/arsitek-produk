@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ProductType, GeneratedStructure } from './types';
 import { generateStructure } from './services/geminiService';
 import { StructureDisplay } from './components/StructureDisplay';
@@ -38,7 +38,30 @@ const App: React.FC = () => {
   
   const handleStructureChange = useCallback((newStructure: GeneratedStructure) => {
     setStructure(newStructure);
+    try {
+      localStorage.setItem('ai-architect-structure', JSON.stringify(newStructure));
+    } catch {}
   }, []);
+
+  // load persisted state on mount
+  useEffect(() => {
+    try {
+      const idea = localStorage.getItem('ai-architect-idea');
+      const type = localStorage.getItem('ai-architect-type');
+      const struct = localStorage.getItem('ai-architect-structure');
+      if (idea) setProductIdea(idea);
+      if (type) setProductType((type as unknown) as ProductType);
+      if (struct) setStructure(JSON.parse(struct));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem('ai-architect-idea', productIdea); } catch {}
+  }, [productIdea]);
+
+  useEffect(() => {
+    try { localStorage.setItem('ai-architect-type', productType as string); } catch {}
+  }, [productType]);
 
   const handleExport = useCallback(async () => {
     if (structure && productType && productIdea) {
@@ -147,6 +170,21 @@ const App: React.FC = () => {
                         <span className="hidden sm:inline">Export DOC</span>
                     </button>
                  )}
+          <div className="flex gap-2">
+            <button className="px-3 py-1 bg-slate-600 rounded" onClick={() => {
+              // force save current structure
+              try { localStorage.setItem('ai-architect-structure', JSON.stringify(structure)); } catch {}
+            }}>Simpan</button>
+            <button className="px-3 py-1 bg-slate-600 rounded" onClick={() => {
+              try {
+                const s = localStorage.getItem('ai-architect-structure');
+                if (s) setStructure(JSON.parse(s));
+              } catch {}
+            }}>Load</button>
+            <button className="px-3 py-1 bg-red-700 rounded" onClick={() => {
+              try { localStorage.removeItem('ai-architect-structure'); setStructure(null); setProductIdea(''); setProductType(null);} catch {}
+            }}>Reset</button>
+          </div>
              </div>
              <StructureDisplay 
                 structure={structure}
