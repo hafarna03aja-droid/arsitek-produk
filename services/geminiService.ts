@@ -2,11 +2,42 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ProductType } from '../types';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
+// =================== KODE DEBUGGING ===================
+// Kita cetak seluruh isi env untuk melihat apa saja yang tersedia
+console.log("Mencoba membaca environment variables...");
+console.log("Isi lengkap dari import.meta.env:", import.meta.env);
+
+// Kita baca variabel spesifik kita
+const API_KEY = import.meta.env.VITE_API_KEY as string | undefined;
+
+// Kita cetak nilainya, apakah undefined, kosong, atau ada isinya
+console.log("Nilai VITE_API_KEY yang terbaca adalah:", API_KEY);
+
+if (!API_KEY) {
+  console.error("ERROR: Variabel VITE_API_KEY tidak ditemukan atau nilainya kosong!");
+  // throw new Error("API_KEY environment variable not set"); // Error ini kita matikan sementara agar halaman tidak blank
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Kita hanya akan menginisialisasi GoogleGenAI jika API_KEY ada
+export const ai: GoogleGenAI | null = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+
+if (!ai) {
+  console.error("Koneksi ke Google AI tidak dapat dibuat karena API Key bermasalah.");
+}
+
+// =======================================================
+
+// Top-level model constant so other modules can reuse if needed
+export const MODEL = "gemini-2.5-flash";
+
+// Ekspor client/instance AI dan helper untuk pengecekan dari modul lain
+export function getAI() {
+  return ai;
+}
+
+export function isAIInitialized(): boolean {
+  return ai !== null;
+}
 
 const Schemas = {
   [ProductType.Course]: {
@@ -85,6 +116,10 @@ export const generateStructure = async (idea: string, productType: ProductType) 
   const model = "gemini-2.5-flash";
 
   try {
+    if (!ai) {
+      throw new Error("API client belum terinisialisasi. Pastikan VITE_API_KEY tersedia di environment.");
+    }
+
     const response = await ai.models.generateContent({
       model: model,
       contents: Prompts[productType](idea),
